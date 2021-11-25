@@ -5,15 +5,25 @@ using System.Collections.Generic;
 using System.IO;
 using DbManipulation.Models;
 using System.Linq;
+using System.Globalization;
 
 namespace DbManipulation
 {
-    public class Crud
+    public partial class Crud : IDisposable
     {
         internal SqlConnection sqlConnection;
         internal SqlCommand sqlCommand;
+        readonly string format;
+        readonly CultureInfo provider;
 
-        public SqlConnection GetConnection() => sqlConnection == null && sqlConnection.State == System.Data.ConnectionState.Open? sqlConnection : InitConnection();
+        public Crud()
+        {
+            InitConnection();
+            format = "dd.MM.yyyy hh:mm:ss";
+            provider = CultureInfo.InvariantCulture;
+        }
+
+        public SqlConnection GetConnection() => sqlConnection != null && sqlConnection.State == System.Data.ConnectionState.Open ? sqlConnection : InitConnection();
 
         private string GetConnectionString()
         {
@@ -44,13 +54,13 @@ namespace DbManipulation
             return null;
         }
 
-        public bool CloseConnection(SqlConnection connection)
+        public bool CloseConnection()
         {
             try
             {
-                if (connection.State == System.Data.ConnectionState.Open)
+                if (sqlConnection.State == System.Data.ConnectionState.Open)
                 {
-                    connection.Close();
+                    sqlConnection.Close();
                 }
                 return true;
             }
@@ -65,6 +75,10 @@ namespace DbManipulation
         {
             if (sqlCommand == null)
                 sqlCommand = new SqlCommand(commandText, GetConnection());
+
+            if (sqlConnection.State == System.Data.ConnectionState.Closed)
+                sqlConnection.Open();
+
             sqlCommand.CommandText = commandText;
         }
 
@@ -85,18 +99,32 @@ namespace DbManipulation
             return res == tasks.Count;
         }
 
-        public List<Task> GetLastestTasks(int[] ids)
+        /// <summary>
+        /// method that returns an array of latest tasks for each customer by CustomerID
+        /// </summary>
+        /// <param name="consumerIds"></param>
+        /// <returns>pending or in progress tasks for each customer</returns>
+        public List<Task> GetLastestTasks(int[] consumerIds)
         {
-            var commandText = string.Join(',', ids.Select(i => i.ToString()));
+            var list = new List<Task>();
+
+            var commandText = $"SELECT * FROM dbo.Tasks where ConsumerID in ({string.Join(',', consumerIds.Select(i => i.ToString()))})";
             FillCommand(commandText);
             var reader = sqlCommand.ExecuteReader();
-            var list = new List<Task>();
             while(reader.Read())
             {
-                var task = new Task((int)reader["ID"], (int)reader["ConsumerID"], reader["TaskText"].ToString(), reader["CreationDate"], reader["ModificationTime"], Helper.GetEnumValue((short)reader["_Status"]));
+                var task = new Task((int)reader["ID"], (int)reader["ConsumerID"], reader["TaskText"].ToString(), 
+                    DateTime.ParseExact(reader["CreationDate"].ToString(), format, provider), 
+                    DateTime.ParseExact(reader["ModificationTime"].ToString(), format, provider), 
+                    Helper.GetEnumValue((byte)reader["_Status"]));
                 list.Add(task);
             }
             return list;
+        }
+
+        public void Dispose()
+        {
+            CloseConnection();
         }
     }
 }

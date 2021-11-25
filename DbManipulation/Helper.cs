@@ -1,5 +1,6 @@
 ﻿using DbManipulation.Enums;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
@@ -21,7 +22,7 @@ namespace DbManipulation
             return @enum.ToString();
         }
 
-        public static StatusEnum GetEnumValue(short status)
+        public static StatusEnum GetEnumValue(byte status)
         {
             return status switch
             {
@@ -31,6 +32,12 @@ namespace DbManipulation
                 3 => StatusEnum.Done,
                 _ => throw new ArgumentException(),
             };
+        }
+
+        public static void ForEach<T>(this IEnumerable<T> collection, Action<T> func)
+        {
+            foreach(var c in collection)
+                func(c);
         }
     }
 }
