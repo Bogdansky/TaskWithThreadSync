@@ -14,8 +14,8 @@ namespace Consumer
         static void Main(string[] args)
         {
             crud = new Crud();
-            var consumersCount = 2;
-            var bulkSize = 1;
+            var consumersCount = 3;
+            var bulkSize = 2;
 
             try
             {
@@ -51,23 +51,20 @@ namespace Consumer
             //добавить проверку и чтение тасков
             while(true)
             {
-                var tasks = crud.GetEmptyTasks(threadSets.BulkSize);
+                var tasks = crud.GetEmptyTasks(threadSets.BulkSize, threadSets.ID);
                 if (tasks.Count == 0)
                     break;
-                tasks.ForEach(task => task.ConsumerId = threadSets.ID);
+
                 ConsumerWork(tasks, threadSets.ID);
 
                 Thread.Sleep(threadSets.Periodicity);
             }
-            Console.WriteLine($"Thread {threadSets.ID} was finished");
+            Console.WriteLine($"Consumer {threadSets.ID} was finished");
         }
-        /// <summary>
-        /// Меняет у тасков ConsumerID и Status и сохраняет в БД
-        /// </summary>
-        /// <param name="tasks">Таски, для которых требуется внести изменения</param>
+
         static void ConsumerWork(List<Task> tasks, int threadId)
         {
-            tasks.ForEach(t => Console.WriteLine($"Thread {threadId}: {t.TaskText}"));
+            tasks.ForEach(t => Console.WriteLine($"Consumer {threadId}: {t.TaskText}"));
         }
     }
 
