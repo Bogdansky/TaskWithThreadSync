@@ -26,7 +26,20 @@ namespace Consumer
             {
                 Console.WriteLine("Parameters were definited not correctly. One of them has null value.");
             }
+            finally
+            {
+                //ConsumerWork(consumersCount, bulkSize);
 
+                #region Statistics print
+
+                ConsumerWorkStatistics();
+
+                #endregion
+            }
+        }
+
+        static void ConsumerWork(int consumersCount, int bulkSize)
+        {
             var ids = Enumerable.Range(1, consumersCount);
 
             var threads = new List<Thread>();
@@ -37,7 +50,6 @@ namespace Consumer
                 threads.Add(thread);
                 thread.Start(new ThreadSets(i, bulkSize));
             }
-            Console.WriteLine("Hello World!");
         }
 
         /// <summary>
@@ -55,16 +67,38 @@ namespace Consumer
                 if (tasks.Count == 0)
                     break;
 
-                ConsumerWork(tasks, threadSets.ID);
-
+                tasks.ForEach(t => Console.WriteLine($"Consumer {threadSets.ID}: {t.TaskText}"));
+                
                 Thread.Sleep(threadSets.Periodicity);
             }
             Console.WriteLine($"Consumer {threadSets.ID} was finished");
         }
 
-        static void ConsumerWork(List<Task> tasks, int threadId)
+        static void ConsumerWorkStatistics()
         {
-            tasks.ForEach(t => Console.WriteLine($"Consumer {threadId}: {t.TaskText}"));
+            PrintTaskStatusesStats();
+            PrintAvgSuccessTime();
+            PrintErrorTasksPercent();
+        }
+
+        static void PrintTaskStatusesStats()
+        {
+            var taskStatusesCount = crud.CalculateTaskStatuses();
+            foreach(var key in taskStatusesCount.Keys)
+            {
+                Console.WriteLine($"{key} - {taskStatusesCount[key]}");
+            }
+        }
+
+        static void PrintAvgSuccessTime()
+        {
+            Console.WriteLine("Average processing time of successfully executed tasks - {0:dd\\.hh\\:mm\\:ss} days", crud.AverageSuccessTime());
+        }
+
+        static void PrintErrorTasksPercent()
+        {
+            var percents = crud.PercentOfErrors() * 100;
+            Console.WriteLine("{0:##.##} % of errors", percents);
         }
     }
 
